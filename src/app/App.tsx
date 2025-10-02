@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createId } from '../lib/id';
 import { clearBrowserState } from '../lib/storage';
 import { ChatSidebar } from '../features/chat/components/chat-sidebar';
@@ -38,6 +38,11 @@ const resolvePresetForRequest = (preset: Preset | null) => {
   };
 };
 
+const extractChatIdFromHash = (hash: string): string | null => {
+  const match = hash.match(/^#\/?chat\/([^/]+)$/);
+  return match ? match[1] : null;
+};
+
 const App = () => {
   const {
     chats,
@@ -70,14 +75,33 @@ const App = () => {
     controller: AbortController;
     messageId: string;
   } | null>(null);
+  const activeChatIdRef = useRef<string | null>(activeChatId);
+
+  useEffect(() => {
+    activeChatIdRef.current = activeChatId;
+  }, [activeChatId]);
+
+  const updateHashForChat = useCallback((chatId: string | null) => {
+    if (typeof window === 'undefined') return;
+    const target = chatId ? '#/chat/' + chatId : '#/';
+    if (window.location.hash === target) return;
+    try {
+      window.history.replaceState(null, '', target);
+    } catch {
+      window.location.hash = target.startsWith('#') ? target.slice(1) : target;
+    }
+  }, []);
 
   const handleSendMessage = async (message: string) => {
-    const hadActiveChat = Boolean(activeChatId);
-    const existingChat: ChatThread | null = hadActiveChat
-      ? chats.find(thread => thread.id === activeChatId) || activeChat || null
+    const previousActiveChatId = activeChatId;
+    const existingChat: ChatThread | null = previousActiveChatId
+      ? chats.find(thread => thread.id === previousActiveChatId) || activeChat || null
       : null;
 
-    const chatId = activeChatId || createChat();
+    let chatId = previousActiveChatId;
+    if (!chatId) {
+      chatId = handleCreateChat();
+    }
     const now = Date.now();
     const userMessage = {
       id: createId('msg'),
@@ -230,6 +254,7 @@ const App = () => {
     clearBrowserState();
     clearChats();
     clearPresets();
+    updateHashForChat(null);
   };
 
   useEffect(() => {
@@ -262,14 +287,60 @@ const App = () => {
     });
   };
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const applyHashSelection = (hash: string) => {
+      const chatIdFromHash = extractChatIdFromHash(hash);
+      if (!chatIdFromHash) return;
+      const exists = chats.some(chat => chat.id === chatIdFromHash);
+      if (!exists) return;
+      if (activeChatIdRef.current === chatIdFromHash) return;
+      selectChat(chatIdFromHash);
+    };
+
+    applyHashSelection(window.location.hash);
+
+    const handleHashChange = () => {
+      applyHashSelection(window.location.hash);
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [chats, selectChat]);
+
+  const handleSelectChat = useCallback(
+    (chatId: string) => {
+      selectChat(chatId);
+      updateHashForChat(chatId);
+    },
+    [selectChat, updateHashForChat]
+  );
+
+  const handleCreateChat = useCallback(() => {
+    const newChatId = createChat();
+    updateHashForChat(newChatId);
+    return newChatId;
+  }, [createChat, updateHashForChat]);
+
+  const handleDeleteChat = useCallback(
+    (chatId: string) => {
+      const nextActiveId = removeChat(chatId);
+      updateHashForChat(nextActiveId ?? null);
+    },
+    [removeChat, updateHashForChat]
+  );
+
   return (
     <div className="flex min-h-screen bg-background">
       <ChatSidebar
         chats={chats}
         activeChatId={activeChatId}
-        onSelectChat={selectChat}
-        onCreateChat={createChat}
-        onDeleteChat={removeChat}
+        onSelectChat={handleSelectChat}
+        onCreateChat={handleCreateChat}
+        onDeleteChat={handleDeleteChat}
         onRenameChat={updateChatTitle}
         onReset={handleReset}
         width={sidebarWidth}
@@ -300,7 +371,10 @@ const App = () => {
           }}
           onCloneFromMessage={messageId => {
             if (!activeChatId) return;
-            cloneChatUpToMessage(activeChatId, messageId);
+            const newChatId = cloneChatUpToMessage(activeChatId, messageId);
+            if (newChatId) {
+              updateHashForChat(newChatId);
+            }
           }}
           onRegenerateMessage={messageId => {
             handleRegenerateAssistantMessage(messageId);

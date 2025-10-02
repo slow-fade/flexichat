@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { Check, Pencil, Trash2, X } from 'lucide-react';
 import { cn } from '../../../lib/cn';
@@ -10,6 +10,8 @@ const formatDate = (timestamp: number) => {
   const date = new Date(timestamp);
   return date.toLocaleString();
 };
+
+const escapeRegExp = (value: string) => value.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
 
 type ChatSidebarProps = {
   chats: ChatThread[];
@@ -36,6 +38,7 @@ export const ChatSidebar = ({
 }: ChatSidebarProps) => {
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [titleDraft, setTitleDraft] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const startResize = (event: ReactPointerEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -86,6 +89,20 @@ export const ChatSidebar = ({
     setTitleDraft('');
   };
 
+  const filteredChats = useMemo(() => {
+    const trimmed = searchTerm.trim();
+    if (!trimmed) {
+      return chats;
+    }
+
+    const pattern = new RegExp('\\b' + escapeRegExp(trimmed), 'i');
+    return chats.filter(chat => pattern.test(chat.title));
+  }, [chats, searchTerm]);
+
+  const hasSearch = searchTerm.trim().length > 0;
+  const hasChats = chats.length > 0;
+  const hasResults = filteredChats.length > 0;
+
   return (
     <aside
       className="relative flex flex-shrink-0 flex-col overflow-hidden border-r border-neutral-800 bg-sidebar p-4"
@@ -98,8 +115,17 @@ export const ChatSidebar = ({
         </Button>
       </header>
 
-      <div className="mt-4 flex-1 space-y-2 overflow-y-auto pr-1">
-        {chats.map(chat => {
+      <div className="mt-4">
+        <Input
+          value={searchTerm}
+          onChange={event => setSearchTerm(event.target.value)}
+          placeholder="Search chats"
+          aria-label="Search chats"
+        />
+      </div>
+
+      <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
+        {filteredChats.map(chat => {
           const isActive = chat.id === activeChatId;
           const isEditing = editingChatId === chat.id;
 
@@ -190,7 +216,10 @@ export const ChatSidebar = ({
             </div>
           );
         })}
-        {chats.length === 0 && (
+        {!hasResults && hasSearch && (
+          <p className="text-sm text-neutral-400">No chats match your search.</p>
+        )}
+        {!hasResults && !hasSearch && !hasChats && (
           <p className="text-sm text-neutral-400">No chats yet. Start a conversation.</p>
         )}
       </div>
