@@ -1,9 +1,5 @@
 name = "openrouterwebui"
-main = "worker/index.js"
 compatibility_date = "2025-09-30"
-
-[build]
-command = "npm run build"
 
 [assets]
 not_found_handling = "single-page-application"
