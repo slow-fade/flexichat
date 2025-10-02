@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Copy, Plus, Trash2 } from 'lucide-react';
+import { Copy, Plus, Settings, Trash2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTrigger } from '../../../components/ui/dialog';
 import { Input } from '../../../components/ui/input';
@@ -330,46 +330,41 @@ export const PresetPanel = ({
     onCreatePreset(payload);
     setManagerMode('view');
     setSelectedPresetId(null);
+    setModelQuery('');
   };
 
   return (
-    <section className="border-b border-neutral-800 px-8 py-6">
-      <div className="mx-auto flex max-w-5xl flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-neutral-100">Presets</h2>
-            <p className="text-sm text-neutral-400">Select and manage presets for this session.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="w-56">
-              <Select
-                value={activePresetId ? activePresetId : undefined}
-                onValueChange={onSelectPreset}
-                disabled={presets.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={presets.length === 0 ? 'No presets yet' : 'Select preset'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {presets.map(preset => (
-                    <SelectItem key={preset.id} value={preset.id}>
-                      {preset.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Dialog open={isManagerOpen} onOpenChange={handleManagerOpenChange}>
-              <DialogTrigger asChild>
-                <Button variant="secondary">Manage presets</Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-5xl">
-                <DialogHeader>Manage presets</DialogHeader>
-                <DialogDescription>
-                  Create, edit, or delete presets. Changes are stored locally in this browser.
-                </DialogDescription>
-                <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-                  <aside className="w-full max-w-xs flex-shrink-0 border border-neutral-800 bg-neutral-950/70 p-4">
+    <section className="border-b border-neutral-800 px-8 py-4">
+      <div className="flex items-center gap-2">
+        <Select
+          value={activePresetId ? activePresetId : undefined}
+          onValueChange={onSelectPreset}
+          disabled={presets.length === 0}
+        >
+          <SelectTrigger className="inline-flex w-auto border-transparent bg-transparent px-0 py-1 text-lg font-semibold text-neutral-100 shadow-none hover:bg-neutral-900/40 focus:ring-0 focus-visible:ring-0">
+            <SelectValue placeholder={presets.length === 0 ? 'Select preset' : undefined} />
+          </SelectTrigger>
+          <SelectContent>
+            {presets.map(preset => (
+              <SelectItem key={preset.id} value={preset.id}>
+                {preset.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Dialog open={isManagerOpen} onOpenChange={handleManagerOpenChange}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Manage presets">
+              <Settings className="h-5 w-5" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-5xl">
+              <DialogHeader>Manage presets</DialogHeader>
+              <DialogDescription>
+                Create, edit, or delete presets. Changes are stored locally in this browser.
+              </DialogDescription>
+              <div className="mt-6 flex flex-col gap-6 lg:flex-row">
+                <aside className="w-full max-w-xs flex-shrink-0 border border-neutral-800 bg-neutral-950/70 p-4">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-medium text-neutral-200">Existing presets</p>
                       <Button type="button" variant="secondary" size="icon" onClick={handleStartCreate} aria-label="Create preset">
@@ -430,8 +425,8 @@ export const PresetPanel = ({
                         </div>
                       ))}
                     </div>
-                  </aside>
-                  <div className="flex-1 space-y-5">
+                </aside>
+                <div className="flex-1 space-y-5">
                     {managerMode === 'create' ? (
                       <div className="space-y-5">
                         <h3 className="text-base font-semibold text-neutral-100">Create preset</h3>
@@ -802,6 +797,13 @@ export const PresetPanel = ({
                             />
                           </div>
                           <div className="flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => handleManagerOpenChange(false)}
+                            >
+                              Close
+                            </Button>
                             <Button type="submit">Save changes</Button>
                           </div>
                         </form>
@@ -811,12 +813,10 @@ export const PresetPanel = ({
                         Select a preset from the list or create a new one.
                       </div>
                     )}
-                  </div>
                 </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
+              </div>
+            </DialogContent>
+          </Dialog>
       </div>
     </section>
   );

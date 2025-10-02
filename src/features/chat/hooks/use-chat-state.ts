@@ -42,7 +42,8 @@ export const useChatState = () => {
       id: createId('chat'),
       title: 'Untitled chat',
       updatedAt: now,
-      messages: []
+      messages: [],
+      lastPresetId: null
     };
     setChats(previous => [newChat, ...previous]);
     setActiveChatId(newChat.id);
@@ -121,6 +122,20 @@ export const useChatState = () => {
     );
   }, []);
 
+  const setChatPreset = useCallback((chatId: string, presetId: string | null) => {
+    setChats(previous =>
+      previous.map(chat =>
+        chat.id === chatId
+          ? {
+              ...chat,
+              lastPresetId: presetId,
+              updatedAt: Date.now()
+            }
+          : chat
+      )
+    );
+  }, []);
+
   const cloneChatUpToMessage = useCallback((chatId: string, messageId: string | null) => {
     let createdChat: ChatThread | null = null;
 
@@ -148,7 +163,8 @@ export const useChatState = () => {
         id: createId('chat'),
         title: cloneTitle,
         updatedAt,
-        messages: newMessages
+        messages: newMessages,
+        lastPresetId: source.lastPresetId ?? null
       };
 
       return [createdChat, ...previous];
@@ -186,6 +202,7 @@ export const useChatState = () => {
     appendMessage,
     updateMessage,
     removeMessage,
+    setChatPreset,
     cloneChatUpToMessage,
     removeChat,
     clearAll

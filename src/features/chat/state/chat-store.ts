@@ -10,7 +10,8 @@ const createDefaultChats = (): ChatThread[] => {
       id: createId('chat'),
       title: 'Welcome',
       updatedAt: now,
-      messages: []
+      messages: [],
+      lastPresetId: null
     }
   ];
 };
@@ -36,7 +37,8 @@ const isChatThread = (value: unknown): value is ChatThread => {
     typeof thread.title === 'string' &&
     typeof thread.updatedAt === 'number' &&
     Array.isArray(thread.messages) &&
-    thread.messages.every(isMessage)
+    thread.messages.every(isMessage) &&
+    (typeof thread.lastPresetId === 'string' || thread.lastPresetId === null || typeof thread.lastPresetId === 'undefined')
   );
 };
 

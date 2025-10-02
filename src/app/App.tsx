@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createId } from '../lib/id';
 import { clearBrowserState } from '../lib/storage';
 import { ChatSidebar } from '../features/chat/components/chat-sidebar';
@@ -49,6 +49,7 @@ const App = () => {
     appendMessage,
     updateMessage,
     removeMessage,
+    setChatPreset,
     cloneChatUpToMessage,
     removeChat,
     clearAll: clearChats
@@ -64,6 +65,7 @@ const App = () => {
     clearAll: clearPresets
   } = usePresetState();
   const [isResponding, setIsResponding] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(288);
 
   const handleSendMessage = async (message: string) => {
     const hadActiveChat = Boolean(activeChatId);
@@ -89,6 +91,7 @@ const App = () => {
     setIsResponding(true);
     try {
       const presetForRequest = resolvePresetForRequest(activePreset || null);
+      setChatPreset(chatId, presetForRequest.id);
       const history = mapHistoryToMessages(existingChat);
       const requestMessages = buildRequestMessages({
         instructions: presetForRequest.instructions,
@@ -126,10 +129,86 @@ const App = () => {
     }
   };
 
+  const handleRegenerateAssistantMessage = async (messageId: string) => {
+    if (!activeChat || !activeChatId) return;
+
+    const assistantIndex = activeChat.messages.findIndex(message => message.id === messageId);
+    if (assistantIndex === -1) return;
+
+    const targetMessage = activeChat.messages[assistantIndex];
+    if (targetMessage.role !== 'assistant') return;
+
+    const previousMessages = activeChat.messages.slice(0, assistantIndex);
+    let lastUserIndex = -1;
+    for (let index = previousMessages.length - 1; index >= 0; index -= 1) {
+      if (previousMessages[index].role === 'user') {
+        lastUserIndex = index;
+        break;
+      }
+    }
+
+    if (lastUserIndex === -1) return;
+
+    const lastUserMessage = previousMessages[lastUserIndex];
+    const historyMessages = previousMessages.slice(0, lastUserIndex).map(message => ({
+      role: message.role,
+      content: message.content
+    }));
+
+    setIsResponding(true);
+    try {
+      const presetForRequest = resolvePresetForRequest(activePreset || null);
+      setChatPreset(activeChatId, presetForRequest.id);
+      const requestMessages = buildRequestMessages({
+        instructions: presetForRequest.instructions,
+        history: historyMessages,
+        userMessage: { role: 'user', content: lastUserMessage.content }
+      });
+      const extras = buildExtrasFromParameters(presetForRequest.requestParameters);
+      const { content } = await createChatCompletion(
+        {
+          endpoint: presetForRequest.apiEndpoint,
+          apiKey: presetForRequest.apiKey,
+          model: presetForRequest.model,
+          messages: requestMessages,
+          extras
+        },
+        undefined
+      );
+      updateMessage(activeChatId, messageId, content);
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : DEFAULT_ERROR_MESSAGE;
+      updateMessage(activeChatId, messageId, messageText || DEFAULT_ERROR_MESSAGE);
+    } finally {
+      setIsResponding(false);
+    }
+  };
+
   const handleReset = () => {
     clearBrowserState();
     clearChats();
     clearPresets();
+  };
+
+  useEffect(() => {
+    if (!activeChat) return;
+    const chatPresetId = activeChat.lastPresetId;
+    if (!chatPresetId || chatPresetId === activePresetId) return;
+    const presetExists = presets.some(preset => preset.id === chatPresetId);
+    if (presetExists) {
+      selectPreset(chatPresetId);
+    }
+  }, [activeChat, activePresetId, presets, selectPreset]);
+
+  const handleSelectPreset = (presetId: string) => {
+    selectPreset(presetId);
+    if (activeChatId) {
+      setChatPreset(activeChatId, presetId);
+    }
+  };
+
+  const handleResizeSidebar = (nextWidth: number) => {
+    setSidebarWidth(Math.max(240, Math.min(520, Math.round(nextWidth))));
   };
 
   return (
@@ -140,13 +219,16 @@ const App = () => {
         onSelectChat={selectChat}
         onCreateChat={createChat}
         onDeleteChat={removeChat}
+        onRenameChat={updateChatTitle}
         onReset={handleReset}
+        width={sidebarWidth}
+        onResize={handleResizeSidebar}
       />
       <main className="flex flex-1 flex-col">
         <PresetPanel
           presets={presets}
           activePresetId={activePresetId}
-          onSelectPreset={selectPreset}
+          onSelectPreset={handleSelectPreset}
           onCreatePreset={createPreset}
           onUpdatePreset={updatePreset}
           onDeletePreset={removePreset}
@@ -165,8 +247,8 @@ const App = () => {
             if (!activeChatId) return;
             cloneChatUpToMessage(activeChatId, messageId);
           }}
-          onRenameChat={(chatId, title) => {
-            updateChatTitle(chatId, title);
+          onRegenerateMessage={messageId => {
+            handleRegenerateAssistantMessage(messageId);
           }}
         />
         <ChatComposer onSend={handleSendMessage} disabled={!activeChatId || isResponding} />

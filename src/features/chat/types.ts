@@ -12,4 +12,5 @@ export type ChatThread = {
   title: string;
   updatedAt: number;
   messages: ChatMessage[];
+  lastPresetId?: string | null;
 };
