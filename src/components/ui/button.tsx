@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, PropsWithChildren } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type PropsWithChildren } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../lib/cn';
 
@@ -26,8 +26,12 @@ const buttonStyles = cva(
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonStyles>;
 
-export const Button = ({ className, variant, size, children, ...props }: PropsWithChildren<ButtonProps>) => (
-  <button className={cn(buttonStyles({ variant, size }), className)} {...props}>
-    {children}
-  </button>
+export const Button = forwardRef<HTMLButtonElement, PropsWithChildren<ButtonProps>>(
+  ({ className, variant, size, children, ...props }, ref) => (
+    <button ref={ref} className={cn(buttonStyles({ variant, size }), className)} {...props}>
+      {children}
+    </button>
+  )
 );
+
+Button.displayName = 'Button';

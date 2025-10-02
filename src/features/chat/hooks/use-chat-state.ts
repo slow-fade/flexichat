@@ -173,17 +173,25 @@ export const useChatState = () => {
     if (createdChat) {
       setActiveChatId(createdChat.id);
     }
+    return createdChat ? createdChat.id : null;
   }, []);
 
   const removeChat = useCallback((chatId: string) => {
+    let resolvedActiveId: string | null = null;
     setChats(previous => {
       const nextChats = previous.filter(chat => chat.id !== chatId);
       setActiveChatId(current => {
-        if (current !== chatId) return current;
-        return nextChats[0] ? nextChats[0].id : null;
+        if (current !== chatId) {
+          resolvedActiveId = current;
+          return current;
+        }
+        const nextActive = nextChats[0] ? nextChats[0].id : null;
+        resolvedActiveId = nextActive;
+        return nextActive;
       });
       return nextChats;
     });
+    return resolvedActiveId;
   }, []);
 
   const clearAll = useCallback(() => {
