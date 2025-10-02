@@ -1,7 +1,9 @@
 import { createId } from '../../../lib/id';
 import { createLocalStore, createSessionStore } from '../../../lib/storage';
 import { STORAGE_KEYS } from '../../../lib/storage';
-import type { ChatMessage, ChatThread } from '../types';
+import type { ChatMessage, ChatThread, MessageStatus } from '../types';
+
+const VALID_STATUSES: MessageStatus[] = ['pending', 'complete', 'error', 'cancelled'];
 
 const createDefaultChats = (): ChatThread[] => {
   const now = Date.now();
@@ -21,11 +23,15 @@ const initialChats = createDefaultChats();
 const isMessage = (value: unknown): value is ChatMessage => {
   if (!value || typeof value !== 'object') return false;
   const message = value as ChatMessage;
+  const hasValidStatus =
+    typeof message.status === 'undefined' || (VALID_STATUSES as string[]).includes(message.status);
+
   return (
     typeof message.id === 'string' &&
     (message.role === 'assistant' || message.role === 'user') &&
     typeof message.content === 'string' &&
-    typeof message.createdAt === 'number'
+    typeof message.createdAt === 'number' &&
+    hasValidStatus
   );
 };
 
