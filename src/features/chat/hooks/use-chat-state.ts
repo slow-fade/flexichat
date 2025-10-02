@@ -77,8 +77,8 @@ export const useChatState = () => {
     );
   }, []);
 
-  const updateMessage = useCallback((chatId: string, messageId: string, content: string) => {
-    const trimmed = content;
+  const updateMessage = useCallback(
+    (chatId: string, messageId: string, patch: Partial<Omit<ChatMessage, 'id'>>) => {
     setChats(previous =>
       previous.map(chat => {
         if (chat.id !== chatId) return chat;
@@ -91,7 +91,7 @@ export const useChatState = () => {
           didUpdate = true;
           return {
             ...message,
-            content: trimmed
+            ...patch
           };
         });
 
@@ -100,7 +100,7 @@ export const useChatState = () => {
         return {
           ...chat,
           messages: nextMessages,
-          updatedAt: Date.now()
+          updatedAt: patch.createdAt ?? Date.now()
         };
       })
     );

@@ -66,6 +66,10 @@ const App = () => {
   } = usePresetState();
   const [isResponding, setIsResponding] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(288);
+  const [activeRequest, setActiveRequest] = useState<{
+    controller: AbortController;
+    messageId: string;
+  } | null>(null);
 
   const handleSendMessage = async (message: string) => {
     const hadActiveChat = Boolean(activeChatId);
@@ -88,6 +92,17 @@ const App = () => {
       updateChatTitle(chatId, suggestedTitle);
     }
 
+    const pendingMessageId = createId('msg');
+    appendMessage(chatId, {
+      id: pendingMessageId,
+      role: 'assistant',
+      content: '',
+      createdAt: Date.now(),
+      status: 'pending'
+    });
+
+    const controller = new AbortController();
+    setActiveRequest({ controller, messageId: pendingMessageId });
     setIsResponding(true);
     try {
       const presetForRequest = resolvePresetForRequest(activePreset || null);
@@ -107,30 +122,35 @@ const App = () => {
           messages: requestMessages,
           extras
         },
-        undefined
+        controller.signal
       );
 
-      appendMessage(chatId, {
-        id: createId('msg'),
-        role: 'assistant',
+      updateMessage(chatId, pendingMessageId, {
         content,
+        status: 'complete',
         createdAt: Date.now()
       });
     } catch (error) {
-      const messageText = error instanceof Error ? error.message : DEFAULT_ERROR_MESSAGE;
-      appendMessage(chatId, {
-        id: createId('msg'),
-        role: 'assistant',
+      const isAbortError = error instanceof DOMException && error.name === 'AbortError';
+      const messageText = isAbortError
+        ? 'Request cancelled.'
+        : error instanceof Error
+          ? error.message
+          : DEFAULT_ERROR_MESSAGE;
+      updateMessage(chatId, pendingMessageId, {
         content: messageText || DEFAULT_ERROR_MESSAGE,
+        status: isAbortError ? 'cancelled' : 'error',
         createdAt: Date.now()
       });
     } finally {
+      setActiveRequest(current => (current?.messageId === pendingMessageId ? null : current));
       setIsResponding(false);
     }
   };
 
   const handleRegenerateAssistantMessage = async (messageId: string) => {
     if (!activeChat || !activeChatId) return;
+    if (activeRequest) return;
 
     const assistantIndex = activeChat.messages.findIndex(message => message.id === messageId);
     if (assistantIndex === -1) return;
@@ -155,6 +175,14 @@ const App = () => {
       content: message.content
     }));
 
+    updateMessage(activeChatId, messageId, {
+      content: '',
+      status: 'pending',
+      createdAt: Date.now()
+    });
+
+    const controller = new AbortController();
+    setActiveRequest({ controller, messageId });
     setIsResponding(true);
     try {
       const presetForRequest = resolvePresetForRequest(activePreset || null);
@@ -173,13 +201,27 @@ const App = () => {
           messages: requestMessages,
           extras
         },
-        undefined
+        controller.signal
       );
-      updateMessage(activeChatId, messageId, content);
+      updateMessage(activeChatId, messageId, {
+        content,
+        status: 'complete',
+        createdAt: Date.now()
+      });
     } catch (error) {
-      const messageText = error instanceof Error ? error.message : DEFAULT_ERROR_MESSAGE;
-      updateMessage(activeChatId, messageId, messageText || DEFAULT_ERROR_MESSAGE);
+      const isAbortError = error instanceof DOMException && error.name === 'AbortError';
+      const messageText = isAbortError
+        ? 'Request cancelled.'
+        : error instanceof Error
+          ? error.message
+          : DEFAULT_ERROR_MESSAGE;
+      updateMessage(activeChatId, messageId, {
+        content: messageText || DEFAULT_ERROR_MESSAGE,
+        status: isAbortError ? 'cancelled' : 'error',
+        createdAt: Date.now()
+      });
     } finally {
+      setActiveRequest(current => (current?.messageId === messageId ? null : current));
       setIsResponding(false);
     }
   };
@@ -209,6 +251,15 @@ const App = () => {
 
   const handleResizeSidebar = (nextWidth: number) => {
     setSidebarWidth(Math.max(240, Math.min(520, Math.round(nextWidth))));
+  };
+
+  const handleCancelPendingMessage = (messageId: string) => {
+    setActiveRequest(current => {
+      if (current && current.messageId === messageId) {
+        current.controller.abort();
+      }
+      return current;
+    });
   };
 
   return (
@@ -241,7 +292,11 @@ const App = () => {
           }}
           onEditMessage={(messageId, content) => {
             if (!activeChatId) return;
-            updateMessage(activeChatId, messageId, content);
+            updateMessage(activeChatId, messageId, {
+              content,
+              status: 'complete',
+              createdAt: Date.now()
+            });
           }}
           onCloneFromMessage={messageId => {
             if (!activeChatId) return;
@@ -250,6 +305,8 @@ const App = () => {
           onRegenerateMessage={messageId => {
             handleRegenerateAssistantMessage(messageId);
           }}
+          pendingMessageId={activeRequest?.messageId ?? null}
+          onCancelPendingMessage={handleCancelPendingMessage}
         />
         <ChatComposer onSend={handleSendMessage} disabled={!activeChatId || isResponding} />
       </main>
