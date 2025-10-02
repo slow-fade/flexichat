@@ -234,11 +234,12 @@ export const PresetPanel = ({
     const trimmedName = formState.name.trim();
     if (!trimmedName || !formState.model) return;
 
-    const nextDrafts = parameterDrafts.map(draft => ({ ...draft, error: undefined }));
+    const nextDrafts = parameterDrafts.map(draft => ({ ...draft }));
     const requestParameters: PresetRequestParameter[] = [];
     let hasErrors = false;
 
     for (const draft of nextDrafts) {
+      draft.error = undefined;
       const name = draft.name.trim();
       const value = draft.value.trim();
 

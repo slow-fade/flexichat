@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { ComponentPropsWithoutRef } from 'react';
 import type { Components } from 'react-markdown';
 import ReactMarkdown from 'react-markdown';
 import { Check, GitBranch, Pencil, RefreshCw, Trash2, X } from 'lucide-react';
@@ -26,11 +27,13 @@ const formatTimestamp = (timestamp: number) => {
   });
 };
 
+type MarkdownCodeProps = ComponentPropsWithoutRef<'code'> & { inline?: boolean };
+
 const markdownComponents: Components = {
   p: props => (
     <p className="whitespace-pre-wrap leading-relaxed text-neutral-200" {...props} />
   ),
-  code: ({ inline, className, ...props }) => {
+  code: ({ inline, className, ...props }: MarkdownCodeProps) => {
     if (inline) {
       return (
         <code className={cn('rounded bg-neutral-800 px-1.5 py-0.5 text-sm text-neutral-100', className)} {...props} />

@@ -65,7 +65,7 @@ export const fetchOpenRouterModels = async (signal?: AbortSignal): Promise<OpenR
 export const createChatCompletion = async (
   input: CreateChatCompletionInput,
   signal?: AbortSignal
-): Promise<{ content: string; choice?: ChatCompletionResponse['choices'][number] }> => {
+): Promise<{ content: string; choice?: NonNullable<ChatCompletionResponse['choices']>[number] }> => {
   const { endpoint, apiKey, model, messages, extras } = input;
 
   const payload: Record<string, unknown> = {
