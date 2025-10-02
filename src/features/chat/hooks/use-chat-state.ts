@@ -137,7 +137,7 @@ export const useChatState = () => {
   }, []);
 
   const cloneChatUpToMessage = useCallback((chatId: string, messageId: string | null) => {
-    let createdChat: ChatThread | null = null;
+    let createdChatId: string | null = null;
 
     setChats(previous => {
       const source = previous.find(chat => chat.id === chatId);
@@ -159,7 +159,7 @@ export const useChatState = () => {
       const baseTitle = source.title || 'Untitled chat';
       const cloneTitle = baseTitle.endsWith(' (branch)') ? baseTitle : baseTitle + ' (branch)';
 
-      createdChat = {
+      const clonedChat: ChatThread = {
         id: createId('chat'),
         title: cloneTitle,
         updatedAt,
@@ -167,13 +167,15 @@ export const useChatState = () => {
         lastPresetId: source.lastPresetId ?? null
       };
 
-      return [createdChat, ...previous];
+      createdChatId = clonedChat.id;
+
+      return [clonedChat, ...previous];
     });
 
-    if (createdChat) {
-      setActiveChatId(createdChat.id);
+    if (createdChatId) {
+      setActiveChatId(createdChatId);
     }
-    return createdChat ? createdChat.id : null;
+    return createdChatId;
   }, []);
 
   const removeChat = useCallback((chatId: string) => {
