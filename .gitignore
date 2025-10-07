@@ -35,6 +35,8 @@ playwright/.cache/
 
 # Misc
 *.lock-wscript
+preview.log
+preview.pid
 
 # TypeScript build info
 .tsbuild/

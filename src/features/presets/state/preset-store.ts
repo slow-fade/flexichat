@@ -7,28 +7,13 @@ import { DEFAULT_API_ENDPOINT } from '../types';
 const createDefaultPresets = (): Preset[] => [
   {
     id: createId('preset'),
-    name: 'Friendly support',
-    model: 'openrouter/turbo',
-    instructions: 'Respond warmly and guide the user through each step with short actionable tips.',
+    name: 'Default (openrouter)',
+    model: 'meta-llama/llama-3.3-70b-instruct',
+    instructions:
+      'You are a helpful assistant. Be concise and accurate, ask clarifying questions when useful, and format code with fenced Markdown.',
     apiKey: '',
     apiEndpoint: DEFAULT_API_ENDPOINT,
     requestParameters: []
-  },
-  {
-    id: createId('preset'),
-    name: 'Technical deep dive',
-    model: 'meta/llama3-70b-instruct',
-    instructions: 'Explain implementation details and highlight trade-offs without skipping caveats.',
-    apiKey: '',
-    apiEndpoint: DEFAULT_API_ENDPOINT,
-    requestParameters: [
-      {
-        name: 'response_format',
-        value: {
-          type: 'json_object'
-        }
-      }
-    ]
   }
 ];
 
