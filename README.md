@@ -1,4 +1,7 @@
-# FlexiChat
+# ⚡️ FlexiChat
+
+🚀 **Live Webapp** — *no signup, bring your own key (BYOK)*  
+🌐 [**flexichat.tools.slowfademan.com**](https://flexichat.tools.slowfademan.com)
 
 FlexiChat is a single‑user, browser‑only chat client for OpenRouter‑compatible large language models. It helps you manage multiple conversations, switch between reusable request presets (model, instructions, endpoint, API key, extra parameters), and iterate quickly by editing, branching, or regenerating messages — all persisted locally in your browser.
 
